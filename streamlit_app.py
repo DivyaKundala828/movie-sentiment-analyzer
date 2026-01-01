@@ -1,42 +1,61 @@
 import streamlit as st
 from transformers import pipeline
+import time  # for loading spinner simulation
 
-# Set page title and layout
+# Page config
 st.set_page_config(page_title="Movie Review Sentiment Analyzer", layout="centered")
 
-# Title and description
-st.title("Movie Review Sentiment Analyzer 🚀")
-st.write("Type a movie review below and get instant sentiment prediction (Positive or Negative) using AI!")
+# Title & description
+st.title("Movie Review Sentiment Analyzer 🎬✨")
+st.markdown("Enter any movie review below — get instant sentiment: **Positive 😊**, **Negative 😔**, or **Neutral 😐**!")
 
-# Load the sentiment analysis model (runs only once thanks to caching)
+# Load model with caching (runs only once)
 @st.cache_resource
-def load_sentiment_model():
-    return pipeline("sentiment-analysis")
+def load_model():
+    return pipeline("sentiment-analysis", model="cardiffnlp/twitter-roberta-base-sentiment-latest")
 
-classifier = load_sentiment_model()
+classifier = load_model()
 
-# User input box
+# Input box
 review = st.text_area(
-    "Enter your movie review here...",
-    height=150,
-    placeholder="Example: This movie was absolutely amazing and full of surprises!"
+    "Type your movie review here...",
+    height=120,
+    placeholder="Example: This movie was okay, nothing special but enjoyable."
 )
 
 # Analyze button
 if st.button("Analyze Sentiment"):
     if review.strip() == "":
-        st.warning("Please enter some text to analyze!")
+        st.warning("Please enter a review first!")
     else:
+        # Show loading spinner
         with st.spinner("Analyzing..."):
+            time.sleep(1)  # small delay to show spinner (optional)
             result = classifier(review)[0]
-            label = result['label']
-            score = result['score'] * 100  # Convert to percentage
-            
-            if label == "POSITIVE":
-                st.success(f"**Positive** sentiment! Confidence: {score:.1f}% 😊🎉")
+            label_id = result['label']  # e.g. 'LABEL_2'
+            score = result['score'] * 100
+
+            # Map label to human-readable
+            if label_id == 'LABEL_0':
+                sentiment = "Negative"
+                emoji = "😔"
+                color = "error"
+            elif label_id == 'LABEL_1':
+                sentiment = "Neutral"
+                emoji = "😐"
+                color = "info"
+            else:  # LABEL_2
+                sentiment = "Positive"
+                emoji = "😊"
+                color = "success"
+
+            # Display result
+            if color == "success":
+                st.success(f"**{sentiment}** {emoji}  Confidence: {score:.1f}%")
+            elif color == "error":
+                st.error(f"**{sentiment}** {emoji}  Confidence: {score:.1f}%")
             else:
-                st.error(f"**Negative** sentiment! Confidence: {score:.1f}% 😔")
-            
-            # Show the review for reference
+                st.info(f"**{sentiment}** {emoji}  Confidence: {score:.1f}%")
+
             st.markdown("**Your review:**")
             st.write(review)
